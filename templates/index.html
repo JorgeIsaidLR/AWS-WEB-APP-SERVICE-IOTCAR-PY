@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Movimiento IoT</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            background: linear-gradient(to bottom, #353A40, #16171B);
+            background-attachment: fixed;
+            height: 100vh;
+            margin: 0;
+        }
+    
+        .control-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 400px;
+            margin: auto;
+            padding: 20px;
+        }
+    
+        .button-canvas {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-color: transparent;
+            border-radius: 10px;
+        }
+        .button-canvas-CIRC {
+            width: 100%;
+            aspect-ratio: 1;
+            background-color: transparent;
+            border-radius: 10px;
+        }
+        .last-button {
+            grid-column: 2 / 3;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-color: transparent;
+            border: 2px;
+            border-radius: 10px;
+        }
+    
+        @media (max-width: 600px) {
+            .control-container {
+                width: 100%;
+                max-width: 90%;
+                gap: 5px;
+            }
+    
+            .button-canvas,
+            .last-button {
+                aspect-ratio: 1 / 1;
+            }
+        }
+        #device-status {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #ffffff; 
+        }
+        
+        
+        .status.online .status-icon {
+            background-color: #39ff14;
+        }
+        .status.offline .status-icon {
+            background-color: #333; 
+        }
+        
+        .status-icon {
+            width: 15px;
+            height: 15px;
+            margin-right: 8px;
+            border-radius: 50%;
+            transition: background-color 0.3s ease;
+        }
+        
+        .device-status-container {
+            position: fixed; /* Cambiado de absolute a fixed para una posición consistente en toda la página */
+            top: 20px; /* Ajusta este valor según la altura del título */
+            right: 20px;
+            padding: 10px 15px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 8px;
+            color: white;
+            z-index: 1000;
+            max-width: 200px; /* Limita el ancho para que no ocupe demasiado espacio en móviles */
+        }
+        
+        @media (max-width: 600px) {
+            .device-status-container {
+                top: 80px; /* Ajuste específico para móviles, mayor margen superior */
+                right: 8px;
+                padding: 8px 8px;
+                max-width: 100px;
+            }
+        }
+        
+    </style>
+    
+</head>
+<body>
+    <div id="nombre-container" class="container my-5">
+        <h1 class="text-center mb-4 text-white">BIENVENIDO - PROYECTO IoT</h1>
+        <h3 class="text-center mb-4 text-white">Ingrese su Nombre</h3>
+        <div class="mb-3">
+            <input type="text" id="nombre" class="form-control" placeholder="Escriba su nombre" required style="width: 300px; display: block; margin: 0 auto;">
+        </div>
+        <button id="btn-iniciar" class="btn btn-primary" style="display: block; margin: 0 auto;">Iniciar Control</button>
+    </div>
+   
+    
+
+    <div class="container my-5" id="control-container" style="display: none;">
+        <h1 class="text-center mb-4 text-white">Control de Movimiento IoT</h1>
+
+        <div class="device-status-container">
+            <p class="text-center text-white font-weight-light">Dispositivo</p>
+            <div id="device-status" class="status offline">
+                <span class="status-icon"></span>
+                <label id="device-status-label" class="text-center font-weight-light">offline</label>
+            </div>
+        </div>
+
+        <div class="control-container">
+            <canvas id="#" class="button-canvas"></canvas>
+            <canvas id="canvasTriArriba1" class="button-canvas"></canvas>
+            <canvas id="#" class="button-canvas"></canvas>
+            <canvas id="canvasTriIzq1" class="button-canvas"></canvas>
+            <canvas id="canvasId3" class="button-canvas"></canvas>
+            <canvas id="canvasTriDer1" class="button-canvas"></canvas>
+            <canvas id="canvastrianguloIzq" class="button-canvas"></canvas>
+            <canvas id="canvasTriAbajo1" class="button-canvas"></canvas>
+            <canvas id="miCanvas" class="button-canvas"></canvas>
+            <canvas id="myCanvas4" class="last-button"></canvas>
+        </div>
+        <div class="text-center mt-3">
+            <!-- Botón "Salir" -->
+            <button id="btn-salir" class="btn btn-danger" onclick="logout()">Salir</button>
+            
+            <!-- Botón con icono de base de datos que redirige a /monitor -->
+            <a href="/monitor" id="btn-database" class="btn btn-primary ml-3" onclick="logout()">
+                <i class="fas fa-database" ></i> Database
+            </a>
+        </div>
+        <div class="row" id="tabla-registros" style="display: none;">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header" id="tabla-titulo">Último Registro</div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Status</th>
+                                        <th>IP Cliente</th>
+                                        <th>Nombre</th>
+                                        <th>id_device</th>
+                                        <th>Fecha</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="registros-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 text-center mt-3">
+            <button id="btn-ultimo-registro" class="btn btn-primary">Último Registro</button>
+            <button id="btn-monitoreo" class="btn btn-primary" style="display: none;">Monitoreo Completo</button>
+            <button id="btn-ocultar" class="btn btn-secondary" style="display: none;">Ocultar</button>
+        </div>
+    </div>
+
+    <script>
+
+        let nombre = ''; // Variable para almacenar el nombre
+        let mostrandoTodos = false; // Variable para rastrear si estamos mostrando todos los registros o solo el último
+        // Al hacer clic en "Iniciar Control"
+// Función para actualizar el estado del dispositivo en la interfaz
+async function checkDeviceStatus() {
+    try {
+        const response = await axios.get('/Device-conected');
+        console.log(response.data);  // Verifica la respuesta completa
+        const { id_device, statusonline } = response.data;
+
+        const deviceStatus = document.getElementById('device-status');
+        const deviceStatusLabel = document.getElementById('device-status-label');
+        const statusIcon = document.querySelector('.status-icon');
+
+        // Limpiar las clases de estado anteriores
+        deviceStatus.classList.remove('online', 'offline');
+
+        if (statusonline === 1) {
+            deviceStatus.classList.add('online');
+            deviceStatusLabel.textContent = "Online";
+            statusIcon.style.backgroundColor = '#39ff14';  // Verde para online
+            localStorage.setItem('device_status', 'Online');
+            localStorage.setItem('id_device', id_device);
+            console.log("Estado online:", statusonline);
+        } else {
+            deviceStatus.classList.add('offline');
+            deviceStatusLabel.textContent = "offline";
+            statusIcon.style.backgroundColor = '#333';  // Gris para offline
+            localStorage.removeItem('device_status');
+            localStorage.removeItem('id_device');
+            console.log("Estado offline:", statusonline);
+        }
+    } catch (error) {
+        console.error("Error al obtener el estado del dispositivo:", error);
+    }
+}
+
+
+// Ejecutar la consulta cada 5 segundos
+setInterval(checkDeviceStatus, 5000);
+
+// Cargar el estado al cargar la página
+document.addEventListener('DOMContentLoaded', () => {
+    const storedStatus = localStorage.getItem('device_status');
+    document.getElementById('device-status-label').textContent = storedStatus || "offline";
+});
+
+        document.getElementById('btn-iniciar').addEventListener('click', function() {
+            nombre = document.getElementById('nombre').value;
+            if (nombre) {
+                document.getElementById('nombre-container').style.display = 'none';
+                document.getElementById('control-container').style.display = 'block';
+            } else {
+                alert('Por favor, ingrese su nombre.');
+            }
+        });
+        async function logout() {
+            // Llama a enviarAccion con la acción de "detener"
+            await enviarAccion('detener');
+        
+            // Luego realiza el resto de las acciones de logout
+            nombre = '';
+            document.getElementById('nombre').value = '';
+            document.getElementById('nombre-container').style.display = 'block';
+            document.getElementById('control-container').style.display = 'none';
+        }
+        
+        // Botón para mostrar el último registro
+        document.getElementById('btn-ultimo-registro').addEventListener('click', function() {
+            mostrarUltimoRegistro();
+            document.getElementById('tabla-registros').style.display = 'block';
+            document.getElementById('btn-ultimo-registro').style.display = 'none';
+            document.getElementById('btn-monitoreo').style.display = 'inline';
+            document.getElementById('btn-ocultar').style.display = 'inline';
+            document.getElementById('tabla-titulo').textContent = 'Último Registro';
+            mostrandoTodos = false;
+        });
+    
+        // Botón para mostrar el monitoreo completo
+        document.getElementById('btn-monitoreo').addEventListener('click', function() {
+            obtenerRegistros();
+            document.getElementById('tabla-titulo').textContent = 'Monitoreo Completo';
+            document.getElementById('btn-ultimo-registro').style.display = 'inline';
+            document.getElementById('btn-monitoreo').style.display = 'none';
+            mostrandoTodos = true;
+        });
+    
+        // Botón para ocultar la tabla
+        document.getElementById('btn-ocultar').addEventListener('click', function() {
+            document.getElementById('tabla-registros').style.display = 'none';
+            document.getElementById('btn-ultimo-registro').style.display = 'inline';
+            document.getElementById('btn-monitoreo').style.display = 'none';
+            document.getElementById('btn-ocultar').style.display = 'none';
+        });
+
+        // Función para enviar una acción a la API con la IP del cliente
+        async function enviarAccion(accion) {
+            try {
+                const ipResponse = await axios.get('https://api.ipify.org?format=json');
+                const ipCliente = ipResponse.data.ip;
+
+                const statusValues = {
+                    mover_adelante: 1,
+                    mover_atras: 2,
+                    vuelta_derecha: 3,
+                    vuelta_izquierda: 4,
+                    detener: 0,
+                    giro_90_der: 5,
+                    giro_90_izq: 6,
+                    giro_360_der: 7,
+                    giro_360_izq: 8,
+                    baile: 9
+                };
+
+                const data = {
+                    status: statusValues[accion],
+                    ip_cliente: ipCliente,
+                    name: nombre, // Enviar el nombre ingresado
+                    id_device: 'X1Q7Z3W9R5K2M8L0A6T3V4Y9N5B7G'
+                };
+
+                await axios.post('/items', data);
+                console.log(data);
+                mostrarUltimoRegistro();
+            } catch (error) {
+                alert('Error al enviar la acción');
+                console.error(error);
+            }
+        }
+// Función para obtener y mostrar el último registro
+
+
+
+function mostrarUltimoRegistro() {
+    axios.get('/items')
+        .then(response => {
+            const registros = response.data;
+            const tbody = document.getElementById('registros-tbody');
+            tbody.innerHTML = ''; // Limpiar la tabla
+
+            if (registros.length > 0) {
+                const registro = registros[registros.length - 1]; // Obtener el último registro
+                const row = `<tr>
+                    <td>${registro.id}</td>
+                    <td>${registro.status}</td>
+                    <td>${registro.ip_cliente}</td>
+                    <td>${registro.name}</td>
+                     <td>${registro.id_device}</td>
+                    <td>${registro.date}</td>
+                </tr>`;
+                tbody.innerHTML = row;
+            }
+        })
+        .catch(error => {
+            console.error('Error al obtener el último registro', error);
+        });
+}
+
+// Función para obtener y mostrar todos los registros (usando tu función existente)
+function obtenerRegistros() {
+    axios.get('/Titems')
+        .then(response => {
+            const registros = response.data;
+            const tbody = document.getElementById('registros-tbody');
+            tbody.innerHTML = ''; // Limpiar la tabla
+
+            registros.forEach(registro => {
+                const row = `<tr>
+                    <td>${registro.id}</td>
+                    <td>${registro.status}</td>
+                    <td>${registro.ip_cliente}</td>
+                    <td>${registro.name}</td>
+                     <td>${registro.id_device}</td>
+                    <td>${registro.date}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        })
+        .catch(error => {
+            console.error('Error al obtener los registros', error);
+        });
+}
+
+
+    </script>
+
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+    <script>
+        axios.get('https://api.ipify.org?format=json')
+            .then(response => {
+                const clientIp = response.data.ip;
+                console.log("IP del cliente:", clientIp);
+            })
+            .catch(error => {
+                console.error("Error al obtener la IP del cliente:", error);
+            });
+    </script>
+</body>
+</html>
